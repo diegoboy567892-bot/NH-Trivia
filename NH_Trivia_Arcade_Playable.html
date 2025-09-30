@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NH Trivia Arcade — Play Again</title>
+<style>
+:root{
+  --bg1:#041226; --panel:#07263a; --accent:#ffd400;
+  --glass: rgba(255,255,255,0.03);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Press Start 2P", monospace;background:radial-gradient(circle at 10% 10%, #0a3750 0%, #021024 45%, #000 100%);color:#fff;}
+.app{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.screen{width:100%;max-width:1100px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.45));border-radius:14px;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,0.7);}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.h1{font-size:24px;margin:0}
+.user{font-size:12px;color:#cfe}
+.center{text-align:center}
+.menu-grid{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:12px}
+.btn{padding:12px 18px;border-radius:10px;background:linear-gradient(180deg,#111,#000);border:3px solid rgba(255,255,255,0.04);cursor:pointer;font-weight:900;color:#fff;min-width:260px;box-shadow:0 10px 26px rgba(0,0,0,0.6);transition:transform .12s, box-shadow .12s}
+.btn:hover{transform:translateY(-6px);box-shadow:0 22px 44px rgba(0,0,0,0.7)}
+.btn.play{background:linear-gradient(180deg,#ff6f4d,#ff2b2b);border-color:#ffb8b0}
+.btn.ranks{background:linear-gradient(180deg,#2dd17a,#0ea66a);color:#052}
+.btn.pos{background:linear-gradient(180deg,#ffd54a,#ffb400);color:#452400}
+.btn.admin{background:linear-gradient(180deg,#2fa8ff,#2b6cff)}
+.diff-row{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.pill{padding:10px 12px;border-radius:8px;font-weight:900;cursor:pointer;border:3px solid rgba(255,255,255,0.04)}
+.easy{background:linear-gradient(180deg,#39d353,#2f9f41);color:#001}
+.mid{background:linear-gradient(180deg,#f6b45e,#ea8f2e);color:#111}
+.hard{background:linear-gradient(180deg,#ef5350,#c62828);color:#fff}
+
+/* question card */
+.qcard{margin-top:18px;padding:14px;border-radius:10px;background:linear-gradient(180deg,#081a2a,#04121a);border:2px solid rgba(255,255,255,0.04);}
+.qtext{font-size:16px;margin-bottom:12px}
+.options{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.opt{padding:12px;border-radius:8px;background:linear-gradient(180deg,#0f1620,#0b0f16);cursor:pointer;border:3px solid rgba(255,255,255,0.03);text-align:center;font-weight:900}
+.opt:hover{transform:translateY(-6px);box-shadow:0 12px 28px rgba(0,0,0,0.6)}
+
+/* feedback */
+.feedback{height:28px;margin-top:8px;font-weight:900;text-align:center}
+
+/* ranks */
+.ranks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:12px}
+.rank-card{background:linear-gradient(180deg,#06111a,#0a1720);padding:12px;border-radius:8px;text-align:center;border:2px solid rgba(255,255,255,0.04)}
+.rank-logo{font-size:34px;margin-bottom:6px}
+.progress{height:12px;background:rgba(255,255,255,0.05);border-radius:8px;overflow:hidden;margin-top:8px}
+.progress>div{height:100%;width:0%;background:linear-gradient(90deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02));transition:width 700ms ease}
+
+/* table */
+.table{margin-top:12px;overflow:auto;max-height:420px}
+
+/* levelup & welcome */
+.banner{position:fixed;left:50%;transform:translateX(-50%);top:12%;background:linear-gradient(90deg,#ffea00,#ff7a00);color:#000;padding:16px 22px;border-radius:8px;font-weight:900;display:none;z-index:200}
+.welcome{position:fixed;left:50%;transform:translateX(-50%);top:6%;background:linear-gradient(90deg,#ffffff10,#ffffff05);color:#fff;padding:12px 18px;border-radius:8px;display:none;z-index:200;font-weight:900}
+
+/* decorative stars */
+.stars{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:radial-gradient(circle at 10% 20%, rgba(255,255,255,0.06) 0.6px, transparent 0.7px),radial-gradient(circle at 40% 60%, rgba(255,255,255,0.04) 0.6px, transparent 0.8px),radial-gradient(circle at 80% 30%, rgba(255,255,255,0.05) 0.5px, transparent 0.6px);animation:moveStars 20s linear infinite}
+@keyframes moveStars{0%{transform:translateY(0)}50%{transform:translateY(-12px)}100%{transform:translateY(0)}}
+
+.footer{margin-top:12px;font-size:12px;color:#ccc;text-align:center}
+
+@media (max-width:880px){ .options{grid-template-columns:1fr} .btn{min-width:80%} }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="app">
+  <div class="screen" id="mainScreen">
+    <div class="header"><div class="h1">NH Trivia — Arcade</div><div class="user" id="userLabel">Jugador: —</div></div>
+    <div class="center">
+      <div class="menu-grid" id="menuGrid">
+        <button class="btn btn-play" id="btnPlay">▶ JUGAR</button>
+        <button class="btn btn-ranks" id="btnRanks">🏆 RANGOS</button>
+        <button class="btn btn-pos" id="btnPos">📊 POSICIONES</button>
+        <button class="btn btn-admin" id="btnAdmin">🔒 ADMIN</button>
+      </div>
+
+      <div class="diff-row" id="diffRow" style="display:none">
+        <div class="pill easy" id="easy">FÁCIL (+10)</div>
+        <div class="pill mid" id="mid">INTERMEDIO (+20)</div>
+        <div class="pill hard" id="hard">DIFÍCIL (+30)</div>
+      </div>
+
+      <div class="qcard" id="qcard" style="display:none">
+        <div class="qtext" id="qtext">Pregunta</div>
+        <div class="options" id="opts"></div>
+        <div class="feedback" id="feedback"></div>
+        <div style="margin-top:12px;text-align:center"><button class="btn" id="nextBtn" style="display:none">Siguiente</button> <button class="btn" id="endBtn" style="display:none">Terminar</button></div>
+      </div>
+
+      <div id="resultCard" class="qcard" style="display:none">
+        <div id="resultText" style="font-size:16px"></div>
+        <div style="margin-top:12px;text-align:center">
+          <button class="btn" id="playAgain">JUGAR DE NUEVO</button>
+          <button class="btn" id="backMenu">Volver al Menú</button>
+        </div>
+      </div>
+
+      <div id="ranksView" style="display:none;margin-top:12px">
+        <div class="ranks-grid" id="ranksGrid"></div>
+        <div style="text-align:center;margin-top:10px"><button class="btn" id="closeRanks">Cerrar</button></div>
+      </div>
+
+      <div id="posView" style="display:none;margin-top:12px">
+        <div class="table"><table><thead><tr><th>Pos</th><th>Nombre</th><th>Puntos</th><th>Rango</th></tr></thead><tbody id="posBody"></tbody></table></div>
+        <div style="text-align:center;margin-top:10px"><button class="btn" id="closePos">Cerrar</button></div>
+      </div>
+
+      <div id="adminView" style="display:none;margin-top:12px">
+        <div style="text-align:center"><input id="adminPass" placeholder="Contraseña ADMIN" style="padding:10px;border-radius:8px;border:2px solid #fff3;background:transparent;color:#fff;margin-bottom:8px" /><div><button class="btn" id="doAdmin">Entrar</button> <button class="btn" id="closeAdmin">Cerrar</button></div></div>
+      </div>
+
+    </div>
+    <div class="footer">NH Trivia • Retro Arcade — ¡Diviértete!</div>
+  </div>
+</div>
+
+<div id="welcome" class="welcome" style="display:none"></div>
+<div id="levelup" class="banner" style="display:none"></div>
+
+<script>
+// STORAGE & DATA
+const STORAGE_KEY = 'nh_trivia_full_v2';
+let players = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+let currentUser = null;
+
+// Ranks definitions
+const rankDefs = [
+  {name:'Bronce', min:0, max:100, color:'saddlebrown', icon:'🥉'},
+  {name:'Plata', min:101, max:250, color:'silver', icon:'⚪'},
+  {name:'Oro', min:251, max:500, color:'gold', icon:'🏅'},
+  {name:'Diamante', min:501, max:1000, color:'deepskyblue', icon:'💎'},
+  {name:'Leyenda', min:1001, max:2000, color:'crimson', icon:'👑'},
+  {name:'ADMIN', min:9999999, max:99999999, color:'rainbow', icon:'🌈'}
+];
+
+// POINTS
+const pts = { facil:10, intermedio:20, dificil:30 };
+
+// BANKS: 20 each (sample mixture)
+const banks = {
+  facil: [
+    {q:'¿La IA nos dominará algún día?', opts:['Sí','No','Sólo en películas','No lo sé'], a:3},
+    {q:'¿Cuánto es 2+2?', opts:['3','4','5','6'], a:1},
+    {q:'Capital de Perú', opts:['Lima','Bogotá','Quito','Asunción'], a:0},
+    {q:'Color del cielo en día claro', opts:['Rojo','Verde','Azul','Amarillo'], a:2},
+    {q:'Animal que ladra', opts:['Gato','Perro','Pato','Caballo'], a:1},
+    {q:'Mes con 28 días', opts:['Febrero','Abril','Junio','Todos'], a:3},
+    {q:'Planeta rojo', opts:['Venus','Júpiter','Marte','Saturno'], a:2},
+    {q:'Agua en estado sólido', opts:['Hielo','Vapor','Nieve','Lluvia'], a:0},
+    {q:'Gas que respiramos', opts:['CO2','Nitrógeno','Oxígeno','Helio'], a:2},
+    {q:'Días de la semana', opts:['5','6','7','8'], a:2},
+    {q:'Color mezcla rojo+azul', opts:['Verde','Morado','Amarillo','Negro'], a:1},
+    {q:'¿Qué sonido hace la vaca?', opts:['Miau','Guau','Muu','Pio'], a:2},
+    {q:'¿Cuál es una fruta?', opts:['Zanahoria','Lechuga','Manzana','Patata'], a:2},
+    {q:'¿Qué se usa para escribir?', opts:['Pala','Lápiz','Martillo','Cuchara'], a:1},
+    {q:'¿Cuál es agua?', opts:['H2O','CO2','O2','N2'], a:0},
+    {q:'¿Dónde nace un río?', opts:['Océano','Fuente','Desierto','Montaña'], a:3},
+    {q:'¿Qué se come?', opts:['Silla','Pan','Zapato','Cuaderno'], a:1},
+    {q:'¿Cuál es un número?', opts:['Rojo','Azul','Cinco','Largo'], a:2},
+    {q:'¿Qué brilla en la noche?', opts:['Sol','Luna','Tierra','Silla'], a:1},
+    {q:'¿Qué usamos para llamar?', opts:['Teléfono','Mesa','Puerta','Ventana'], a:0}
+  ],
+  intermedio: [
+    {q:'¿Quién pintó la Mona Lisa?', opts:['Van Gogh','Picasso','Da Vinci','Dalí'], a:2},
+    {q:'Capital de Japón', opts:['Pekín','Seúl','Tokio','Osaka'], a:2},
+    {q:'15x2 es', opts:['20','25','30','35'], a:2},
+    {q:'Río más largo del mundo', opts:['Amazonas','Nilo','Yangtsé','Misisipi'], a:0},
+    {q:'Año llegada a la Luna', opts:['1965','1969','1972','1959'], a:1},
+    {q:'Metal ligero', opts:['Oro','Aluminio','Litio','Plomo'], a:2},
+    {q:'Órgano que bombea sangre', opts:['Pulmón','Hígado','Corazón','Cerebro'], a:2},
+    {q:'¿Quién escribió Hamlet?', opts:['Shakespeare','Cervantes','Neruda','Goethe'], a:0},
+    {q:'Capital de Australia', opts:['Sídney','Melbourne','Canberra','Brisbane'], a:2},
+    {q:'Gas fotosíntesis', opts:['Oxígeno','CO2','Nitrógeno','Helio'], a:1},
+    {q:'¿Cuál país tiene la Gran Muralla?', opts:['Japón','China','India','México'], a:1},
+    {q:'¿Qué planeta tiene anillos?', opts:['Marte','Saturno','Venus','Mercurio'], a:1},
+    {q:'¿En qué continente está Egipto?', opts:['Asia','Europa','África','Oceanía'], a:2},
+    {q:'¿Qué produce la fotosíntesis?', opts:['Azúcar','Oxígeno','Hielo','Sal'], a:1},
+    {q:'¿Qué instrumento tiene teclas?', opts:['Guitarra','Piano','Batería','Trompeta'], a:1},
+    {q:'¿Cuál es la lengua de Brasil?', opts:['Inglés','Portugués','Español','Francés'], a:1},
+    {q:'¿Quién escribió Don Quijote?', opts:['Cervantes','Tolstoi','Homer','Shakespeare'], a:0},
+    {q:'¿Qué gas respiras?', opts:['CO2','Nitrógeno','Oxígeno','Argón'], a:2},
+    {q:'¿Qué instrumento usa arcos?', opts:['Violín','Flauta','Trompeta','Saxofón'], a:0},
+    {q:'¿Cuál es la capital de Francia?', opts:['Lyon','Marsella','París','Burdeos'], a:2}
+  ],
+  dificil: [
+    {q:'Teorema de Pitágoras', opts:['a+b=c','a²+b²=c²','a²=b²+c²','a²-b²=c²'], a:1},
+    {q:'Capital de Mongolia', opts:['Astaná','Ulán Bator','Katmandú','Hanoi'], a:1},
+    {q:'¿Quién formuló la relatividad?', opts:['Newton','Einstein','Tesla','Planck'], a:1},
+    {q:'¿Cuántos cromosomas tiene el humano?', opts:['44','46','48','50'], a:1},
+    {q:'Fundador del Imperio Inca', opts:['Manco Cápac','Atahualpa','Pachacútec','Huayna Cápac'], a:0},
+    {q:'Elemento más abundante en universo', opts:['Hidrógeno','Helio','Oxígeno','Carbono'], a:0},
+    {q:'Primer videojuego exitoso', opts:['Tetris','Pong','Mario Bros','Pac-Man'], a:1},
+    {q:'¿Quién escribió La Odisea?', opts:['Homero','Virgilio','Sófocles','Platón'], a:0},
+    {q:'¿Qué es la entropía?', opts:['Desorden','Energía','Masa','Temperatura'], a:0},
+    {q:'País ganador Mundial 2014', opts:['Brasil','Alemania','España','Argentina'], a:1},
+    {q:'¿Qué es una célula?', opts:['Tejido','Órgano','Unidad básica de vida','Sistema'], a:2},
+    {q:'¿Qué unidad mide la energía?', opts:['Newton','Joule','Ampere','Volt'], a:1},
+    {q:'¿Qué tipo de triángulo tiene 3 lados iguales?', opts:['Isósceles','Escaleno','Equilátero','Obtuso'], a:2},
+    {q:'¿Qué es HTTP?', opts:['Protocolo de red','Lenguaje','Base de datos','Sistema operativo'], a:0},
+    {q:'¿Qué gas contribuye al efecto invernadero?', opts:['Oxígeno','Nitrógeno','CO2','Helio'], a:2},
+    {q:'¿Qué metal conduce mejor la electricidad?', opts:['Hierro','Oro','Cobre','Plata'], a:3},
+    {q:'¿En qué año terminó la Segunda Guerra Mundial?', opts:['1940','1945','1950','1939'], a:1},
+    {q:'¿Cuál es la fórmula del agua?', opts:['H2O','CO2','O2','NaCl'], a:0},
+    {q:'¿Qué ciencia estudia los seres vivos?', opts:['Química','Física','Biología','Sociología'], a:2},
+    {q:'¿Qué cifra es primo?', opts:['21','22','23','24'], a:2}
+  ]
+};
+
+// State for game
+let currentQs = [], qIndex = 0, score = 0, currentDifficulty = null;
+
+// Audio simple SFX + music loop
+let audioCtx = null, musicTimer = null, musicOn = false;
+function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+function sfx(freq, type='sine', dur=0.12){ try{ ensureAudio(); const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=0.06; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur);}catch(e){console.warn(e);} }
+function playClick(){ sfx(900,'square',0.06); }
+function playCorrect(){ sfx(1200,'sine',0.09); }
+function playWrong(){ sfx(220,'sawtooth',0.12); }
+function playLevel(){ sfx(1600,'sawtooth',0.14); setTimeout(()=>sfx(1100,'sine',0.1),120); }
+function startMusic(){
+  if(musicOn) return;
+  ensureAudio();
+  musicOn = true;
+  let idx = 0;
+  const pattern = [440,0,660,0,880,0,660,0,0,0,520,0,620,0,0,0];
+  musicTimer = setInterval(()=>{ const f = pattern[idx % pattern.length]; if(f) sfx(f,'sine',0.12); idx++; }, 200);
+}
+function stopMusic(){ if(musicTimer) clearInterval(musicTimer); musicTimer=null; musicOn=false; }
+
+// DOM refs
+const userLabel = document.getElementById('userLabel');
+const btnPlay = document.getElementById('btnPlay'), btnRanks = document.getElementById('btnRanks'), btnPos = document.getElementById('btnPos'), btnAdmin = document.getElementById('btnAdmin');
+const diffRow = document.getElementById('diffRow'), easyBtn = document.getElementById('easy'), midBtn = document.getElementById('mid'), hardBtn = document.getElementById('hard');
+const qcard = document.getElementById('qcard'), qtext = document.getElementById('qtext'), optsWrap = document.getElementById('opts'), feedback = document.getElementById('feedback');
+const nextBtn = document.getElementById('nextBtn'), endBtn = document.getElementById('endBtn');
+const resultCard = document.getElementById('resultCard'), resultText = document.getElementById('resultText'), playAgain = document.getElementById('playAgain'), backMenu = document.getElementById('backMenu');
+const ranksView = document.getElementById('ranksView'), ranksGrid = document.getElementById('ranksGrid'), closeRanks = document.getElementById('closeRanks');
+const posView = document.getElementById('posView'), posBody = document.getElementById('posBody'), closePos = document.getElementById('closePos');
+const adminView = document.getElementById('adminView'), adminPass = document.getElementById('adminPass'), doAdmin = document.getElementById('doAdmin'), closeAdmin = document.getElementById('closeAdmin');
+const adminViewArea = document.getElementById('adminView');
+
+// initial UI wiring
+btnPlay.onclick = ()=>{ playClick(); ensureUserForPlay(); }
+btnRanks.onclick = ()=>{ playClick(); openRanks(); }
+btnPos.onclick = ()=>{ playClick(); openPositions(); }
+btnAdmin.onclick = ()=>{ playClick(); openAdminView(); }
+easyBtn.onclick = ()=> startGame('facil')
+midBtn.onclick = ()=> startGame('intermedio')
+hardBtn.onclick = ()=> startGame('dificil')
+nextBtn.onclick = ()=> nextQuestion();
+endBtn.onclick = ()=> finishGame();
+playAgain.onclick = ()=> restartPlay();
+backMenu.onclick = ()=> backToMenu();
+closeRanks.onclick = ()=> { ranksView.style.display='none'; document.getElementById('menuGrid').style.display='flex'; }
+closePos.onclick = ()=> { posView.style.display='none'; document.getElementById('menuGrid').style.display='flex'; }
+doAdmin.onclick = ()=> attemptAdmin(); closeAdmin.onclick = ()=> { adminView.style.display='none'; document.getElementById('menuGrid').style.display='flex'; }
+
+// helper: save & update
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(players)); }
+function updateUserLabel(){ userLabel.textContent = 'Jugador: ' + (currentUser || '—'); }
+
+// ensure user logged in / register prompt
+function ensureUserForPlay(){
+  if(!currentUser){
+    const name = prompt('Nombre de usuario (si no existe se crea):');
+    if(!name) return;
+    if(players[name]){ currentUser = name; alert('Bienvenido de nuevo '+name); } else { players[name] = {points:0, rank:'Bronce'}; currentUser = name; save(); alert('Cuenta creada: '+name); }
+    updateUserLabel();
+    document.getElementById('diffRow').style.display = 'flex';
+    startMusic();
+    showWelcome();
+  } else {
+    document.getElementById('diffRow').style.display = 'flex';
+    startMusic();
+  }
+}
+
+// Show welcome banner
+function showWelcome(){
+  const w = document.getElementById('welcome');
+  w.textContent = (currentUser==='ADMIN' || currentUser==='SILVII') ? '✨ ¡Bienvenido, '+currentUser+'!' : '🎮 ¡Bienvenido, '+currentUser+'!';
+  if(currentUser==='ADMIN' || currentUser==='SILVII') w.classList.add('rainbow'); else w.classList.remove('rainbow');
+  w.style.display='block';
+  setTimeout(()=>{ w.style.display='none'; },3200);
+}
+
+// GAME: pick 10 random from bank and shuffle options
+function startGame(level){
+  if(!currentUser){ ensureUserForPlay(); if(!currentUser) return; }
+  currentDifficulty = level;
+  // clone bank, shuffle and pick 10
+  const pool = shuffle(banks[level].slice());
+  currentQs = pool.slice(0,10).map(q=>{
+    const opts = q.opts.map((o,i)=>({o,i}));
+    const shuffled = shuffle(opts.slice());
+    const correctIndex = shuffled.findIndex(x=>x.i===q.a);
+    return {q:q.q, opts:shuffled.map(s=>s.o), correct:correctIndex};
+  });
+  qIndex = 0; score = 0;
+  document.getElementById('menuGrid').style.display='none';
+  qcard.style.display='block';
+  renderQuestion();
+}
+
+// render question
+function renderQuestion(){
+  const cur = currentQs[qIndex];
+  qtext.textContent = `(${qIndex+1}/10) ${cur.q}`;
+  optsWrap.innerHTML = '';
+  cur.opts.forEach((opt,i)=>{
+    const d = document.createElement('div'); d.className='opt'; d.textContent = opt;
+    d.onclick = ()=> chooseAnswer(i,d);
+    optsWrap.appendChild(d);
+  });
+  feedback.textContent='';
+  nextBtn.style.display='none'; endBtn.style.display='none';
+}
+
+// choose answer
+function chooseAnswer(i, el){
+  const cur = currentQs[qIndex];
+  // disable further clicks
+  Array.from(optsWrap.children).forEach(ch=> ch.onclick = null);
+  if(i === cur.correct){
+    // correct
+    const gain = pts[currentDifficulty];
+    score += gain;
+    playCorrect();
+    feedback.textContent = '¡Correcto! +' + gain + ' pts';
+    el.style.borderColor = 'lime';
+  } else {
+    playWrong();
+    feedback.textContent = 'Incorrecto. Respuesta: ' + cur.opts[cur.correct];
+    el.style.borderColor = 'red';
+    // highlight correct
+    optsWrap.children[cur.correct].style.borderColor = 'lime';
+  }
+  // show next or end
+  if(qIndex < currentQs.length - 1) nextBtn.style.display='inline-block'; else endBtn.style.display='inline-block';
+}
+
+// next question
+function nextQuestion(){ qIndex++; renderQuestion(); }
+
+// finish game
+function finishGame(){
+  // update player
+  players[currentUser].points = (players[currentUser].points || 0) + score;
+  const oldRank = players[currentUser].rank || 'Bronce';
+  const newRank = computeRank(players[currentUser].points);
+  players[currentUser].rank = newRank;
+  save();
+  qcard.style.display='none';
+  resultCard.style.display='block';
+  resultText.innerHTML = `<div style="font-size:18px">Fin de la partida — Ganaste ${score} pts</div><div style="margin-top:8px">Total: ${players[currentUser].points} pts — Rango: <strong style="color:${getRankColor(newRank)}">${newRank}</strong></div>`;
+  if(oldRank !== newRank){ // level up animation
+    const b = document.getElementById('levelup'); b.textContent = '¡SUBISTE A: '+newRank+'!'; b.style.display='block'; playLevel(); setTimeout(()=>{ b.style.display='none'; alert('¡Subiste a '+newRank+'!'); },1400); 
+  } else {
+    playClick();
+  }
+}
+
+// restart play (same difficulty)
+function restartPlay(){ resultCard.style.display='none'; document.getElementById('menuGrid').style.display='none'; qcard.style.display='block'; // start new set
+  startGame(currentDifficulty); // reuse difficulty
+}
+
+// back to menu
+function backToMenu(){ resultCard.style.display='none'; qcard.style.display='none'; document.getElementById('menuGrid').style.display='flex'; document.getElementById('diffRow').style.display = currentUser ? 'flex' : 'none'; save(); }
+
+// open ranks view
+function openRanks(){ if(!currentUser){ ensureUserForPlay(); if(!currentUser) return; } // prepare grid
+  ranksView.style.display='block'; document.getElementById('menuGrid').style.display='none'; ranksGrid.innerHTML='';
+  rankDefs.forEach(r=>{
+    const card = document.createElement('div'); card.className='rank-card';
+    const logo = document.createElement('div'); logo.className='rank-logo'; logo.textContent = r.icon;
+    const title = document.createElement('div'); title.innerHTML = `<strong style="${r.color==='rainbow'? 'background:linear-gradient(90deg,red,orange,yellow,green,blue);-webkit-background-clip:text;color:transparent;': 'color:'+r.color}">${r.name}</strong>`;
+    const req = document.createElement('div'); req.className='small'; req.textContent = r.name!=='ADMIN'? `${r.min} — ${r.max} pts` : 'Asignado manualmente';
+    const prog = document.createElement('div'); prog.className='progress'; const inner = document.createElement('div');
+    let pct = 0;
+    if(currentUser && players[currentUser]){ const p = players[currentUser].points || 0; if(r.name!=='ADMIN' && p>=r.min){ const span = r.max - r.min + 1; pct = Math.min(100, Math.round(((p - r.min) / span) * 100)); if(pct<0) pct=0; } }
+    inner.style.width = pct + '%'; prog.appendChild(inner);
+    card.appendChild(logo); card.appendChild(title); card.appendChild(req); card.appendChild(prog);
+    ranksGrid.appendChild(card);
+  });
+}
+
+// positions
+function openPositions(){ if(!currentUser){ ensureUserForPlay(); if(!currentUser) return; }
+  posView.style.display='block'; document.getElementById('menuGrid').style.display='none';
+  const arr = Object.entries(players).map(([name,data])=>({name, points: data.points||0, rank: data.rank||'Bronce'}));
+  arr.sort((a,b)=>{ if(a.name==='ADMIN' && b.name!=='ADMIN') return -1; if(b.name==='ADMIN' && a.name!=='ADMIN') return 1; if(a.name==='SILVII' && b.name!=='SILVII') return -1; if(b.name==='SILVII' && a.name!=='SILVII') return 1; return b.points - a.points; });
+  posBody.innerHTML=''; arr.forEach((p,i)=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${i+1}</td><td ${p.name==='ADMIN'||p.name==='SILVII'? 'class="admin-name"':''}>${p.name}</td><td>${p.points}</td><td style="color:${getRankColor(p.rank)}">${p.rank}</td>`; posBody.appendChild(tr); });
+}
+
+// admin
+function openAdminView(){ if(!currentUser){ ensureUserForPlay(); if(!currentUser) return; } adminView.style.display='block'; document.getElementById('menuGrid').style.display='none'; }
+function attemptAdmin(){ const pass = adminPass.value; if(currentUser==='ADMIN' && pass==='DIEGOESGUAPO'){ adminView.style.display='none'; document.getElementById('menuGrid').style.display='none'; // open secret assigner
+  const target = prompt('Panel ADMIN: escribe el nombre del jugador a editar (o cancelar)'); if(!target) { document.getElementById('menuGrid').style.display='flex'; return; } if(!players[target]){ alert('Jugador no existe'); document.getElementById('menuGrid').style.display='flex'; return; } const newRank = prompt('Rango a asignar: Bronce, Plata, Oro, Diamante, Leyenda, ADMIN'); if(!newRank) { document.getElementById('menuGrid').style.display='flex'; return; } players[target].rank = newRank; save(); alert('Rango asignado a '+target); document.getElementById('menuGrid').style.display='flex'; } else { alert('Acceso denegado'); } }
+
+// utilities
+function computeRank(points){ for(let i=0;i<rankDefs.length;i++){ if(rankDefs[i].name==='ADMIN') continue; if(points>=rankDefs[i].min && points<=rankDefs[i].max) return rankDefs[i].name; } if(points>rankDefs[4].max) return 'Leyenda'; return 'Bronce'; }
+function getRankColor(name){ const r = rankDefs.find(x=>x.name===name); return r? r.color : '#fff'; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+// init
+(function(){ players = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); currentUser = null; updateUserLabel(); startMusic(); })();
+
+</script>
+</body>
+</html>
